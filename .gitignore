@@ -3,6 +3,7 @@
 /.env
 venv
 db
+/traefik/.htpasswd
 /.env.local
 /.env.development.local
 /.env.test.local

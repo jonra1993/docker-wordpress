@@ -1,0 +1,14 @@
+version: "3.9"
+# docker network create proxy
+services:
+  phpmyadmin:    
+    container_name: phpmyadmin-container
+    image: phpmyadmin/phpmyadmin:latest
+    restart: always
+    ports:
+      - 8080:80
+      - 3306:3306
+    environment:
+      PMA_HOST: ${PMA_HOST}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}        
+
