@@ -7,9 +7,16 @@ services:
     environment:
       PMA_HOST: ${PMA_HOST}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    expose:
+      - 80
+    ports:
+      - "9000:80"           
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.phpmyadmin.rule=Host(`phpmyadmin.${ENDPOINT}`)"
+      - "traefik.http.routers.phpmyadmin_rtr_local.entrypoints=phpmyadmin"
+      - "traefik.http.routers.phpmyadmin_rtr_local.rule=Host(`${LOCAL_1}`, `${LOCAL_2}`)"
+      - "traefik.http.routers.phpmyadmin_rtr.entrypoints=phpmyadmin"
+      - "traefik.http.routers.phpmyadmin_rtr.rule=Host(`phpmyadmin.${EXT_ENDPOINT1}`, `phpmyadmin.${EXT_ENDPOINT2}`, `phpmyadmin.${EXT_ENDPOINT3}`)"
 
   wordpress:    
     container_name: ${CONTAINER_SITE_NAME}
@@ -17,7 +24,7 @@ services:
     restart: unless-stopped
     volumes:
       - wordpress_data:/var/www/html
-      - ./conf.d/php.ini:/usr/local/etc/php/conf.d/php.ini
+      - ./conf.d/php.ini:/usr/local/etc/php/conf.d/php.ini     
     expose:  # new
       - 80    
     environment:
@@ -34,11 +41,10 @@ services:
         max-size: ${LOGGING_OPTIONS_MAX_SIZE:-200k}
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.wordpress.rule=Host(`wordpress.${ENDPOINT}`)"
-      # - "traefik.http.routers.wordpress.tls=true" #sets the service to use TLS
-      # - "traefik.http.routers.wordpress.tls.certresolver=letsEncrypt" #references our certificatesResolvers in traefik.yml
-      # - "traefik.http.routers.wordpress.entrypoints=websecure"
-      # - "traefik.http.routers.wordpress-secure.rule=Host(`jrtec.io`)"
+      - "traefik.http.routers.wordpress_rtr_local.entrypoints=web, websecure"
+      - "traefik.http.routers.wordpress_rtr_local.rule=Host(`${LOCAL_1}`, `${LOCAL_2}`)"      
+      - "traefik.http.routers.wordpress.entrypoints=web, websecure"
+      - "traefik.http.routers.wordpress.rule=Host(`${EXT_ENDPOINT1}`, `${EXT_ENDPOINT2}`, `${EXT_ENDPOINT3}`)"
 
   datadog:
     image: datadog/agent
@@ -61,7 +67,7 @@ services:
 
   traefik:
     image: "traefik:latest"
-    container_name: "traefik"
+    container_name: "traefik-container"
     restart: always
     command:
       - "--providers.docker=true"
@@ -69,10 +75,11 @@ services:
       - "80:80"
       - 443:443
       - "8080:8080"
+      - "8000:8000"
+      - "3306:3306"
     depends_on:      
       - wordpress
     volumes:
-      - /etc/localtime:/etc/localtime:ro
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
       - ./traefik/traefik.yml:/traefik.yml:ro
       - ./traefik/.htpasswd:/.htpasswd
@@ -80,7 +87,7 @@ services:
       # - ./traefik/configurations:/configurations
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.dashboard.rule=Host(`traefik.${ENDPOINT}`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))"
+      - "traefik.http.routers.dashboard.rule=Host(`traefik.${LOCAL_1}`, `traefik.${LOCAL_2}`,`traefik.${EXT_ENDPOINT1}`, `traefik.${EXT_ENDPOINT2}`, `${EXT_ENDPOINT3}`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))"
       - "traefik.http.routers.dashboard.service=api@internal"
       - "traefik.http.routers.dashboard.middlewares=auth"
       - "traefik.http.middlewares.auth.basicauth.usersfile=/.htpasswd"
