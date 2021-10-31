@@ -7,6 +7,7 @@ services:
     environment:
       PMA_HOST: ${PMA_HOST}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      UPLOAD_LIMIT: 64M
     expose:
       - 80
     ports:
@@ -14,13 +15,13 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.phpmyadmin_rtr_local.entrypoints=phpmyadmin"
-      - "traefik.http.routers.phpmyadmin_rtr_local.rule=Host(`${LOCAL_1}`, `${LOCAL_2}`)"
+      - "traefik.http.routers.phpmyadmin_rtr_local.rule=Host(`phpmyadmin.${LOCAL_1}`, `phpmyadmin.${LOCAL_2}`)"
       - "traefik.http.routers.phpmyadmin_rtr.entrypoints=phpmyadmin"
       - "traefik.http.routers.phpmyadmin_rtr.rule=Host(`phpmyadmin.${EXT_ENDPOINT1}`, `phpmyadmin.${EXT_ENDPOINT2}`, `phpmyadmin.${EXT_ENDPOINT3}`)"
 
   wordpress:    
     container_name: ${CONTAINER_SITE_NAME}
-    image: wordpress:latest
+    image: wordpress:5.6
     restart: unless-stopped
     volumes:
       - wordpress_data:/var/www/html
@@ -41,10 +42,11 @@ services:
         max-size: ${LOGGING_OPTIONS_MAX_SIZE:-200k}
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.wordpress_rtr_local.entrypoints=web, websecure"
-      - "traefik.http.routers.wordpress_rtr_local.rule=Host(`${LOCAL_1}`, `${LOCAL_2}`)"      
-      - "traefik.http.routers.wordpress.entrypoints=web, websecure"
-      - "traefik.http.routers.wordpress.rule=Host(`${EXT_ENDPOINT1}`, `${EXT_ENDPOINT2}`, `${EXT_ENDPOINT3}`)"
+      - "traefik.http.routers.wordpress_http.entrypoints=web"
+      - "traefik.http.routers.wordpress_http.rule=Host(`${LOCAL_1}`, `${LOCAL_2}`, `${EXT_ENDPOINT1}`, `${EXT_ENDPOINT2}`, `${EXT_ENDPOINT3}`)"      
+      - "traefik.http.routers.wordpress_https.entrypoints=websecure"
+      - "traefik.http.routers.wordpress_https.tls.certresolver=teeresolver"
+      - "traefik.http.routers.wordpress_https.rule=Host(`${EXT_ENDPOINT1}`, `${EXT_ENDPOINT2}`, `${EXT_ENDPOINT3}`)"
 
   datadog:
     image: datadog/agent
@@ -73,7 +75,7 @@ services:
       - "--providers.docker=true"
     ports:
       - "80:80"
-      - 443:443
+      - "443:443"
       - "8080:8080"
       - "8000:8000"
       - "3306:3306"
@@ -87,7 +89,7 @@ services:
       # - ./traefik/configurations:/configurations
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.dashboard.rule=Host(`traefik.${LOCAL_1}`, `traefik.${LOCAL_2}`,`traefik.${EXT_ENDPOINT1}`, `traefik.${EXT_ENDPOINT2}`, `${EXT_ENDPOINT3}`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))"
+      - "traefik.http.routers.dashboard.rule=Host(`traefik.${LOCAL_1}`, `traefik.${LOCAL_2}`,`traefik.${EXT_ENDPOINT1}`, `traefik.${EXT_ENDPOINT2}`, `traefik.${EXT_ENDPOINT3}`)"
       - "traefik.http.routers.dashboard.service=api@internal"
       - "traefik.http.routers.dashboard.middlewares=auth"
       - "traefik.http.middlewares.auth.basicauth.usersfile=/.htpasswd"
