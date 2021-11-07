@@ -48,25 +48,6 @@ services:
       - "traefik.http.routers.wordpress_https.tls.certresolver=teeresolver"
       - "traefik.http.routers.wordpress_https.rule=Host(`${EXT_ENDPOINT1}`, `${EXT_ENDPOINT2}`, `${EXT_ENDPOINT3}`)"
 
-  datadog:
-    image: datadog/agent
-    container_name: datadog-agent
-    expose:  # new
-      - 8125
-      - 8126    
-    volumes:
-     - /var/run/docker.sock:/var/run/docker.sock
-     - /proc/:/host/proc/:ro
-     - /sys/fs/cgroup:/host/sys/fs/cgroup:ro
-     - /var/lib/docker/containers:/var/lib/docker/containers:ro    
-    depends_on:
-      - wordpress
-    environment:
-      - DD_API_KEY=${DD_API_KEY}
-      - DD_SITE=datadoghq.com
-      - DD_LOGS_ENABLED=true
-      - DD_LOGS_CONFIG_DOCKER_CONTAINER_USE_FILE=true # To read log from file instead of the docker socket    
-
   traefik:
     image: "traefik:latest"
     container_name: "traefik-container"
